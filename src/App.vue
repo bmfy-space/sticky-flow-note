@@ -107,6 +107,25 @@ const fitView = (options?: any) => {
   vueFlowInstance.value?.fitView(options)
 }
 
+// 重置缩放到100%，保持画布中心点不变
+const resetZoom = () => {
+  if (!vueFlowInstance.value) return
+  
+  const currentZoom = viewport.value.zoom
+  const currentX = viewport.value.x
+  const currentY = viewport.value.y
+  
+  // 计算屏幕中心点对应的画布坐标
+  const screenCenterX = window.innerWidth / 2
+  const screenCenterY = window.innerHeight / 2
+  
+  // 计算新的视口位置，使画布中心保持不变
+  const newX = screenCenterX - (screenCenterX - currentX) / currentZoom
+  const newY = screenCenterY - (screenCenterY - currentY) / currentZoom
+  
+  vueFlowInstance.value.setViewport({ x: newX, y: newY, zoom: 1 })
+}
+
 const isDrawing = ref(false)
 const isSpacePressed = ref(false)
 
@@ -300,7 +319,7 @@ const createNote = (x: number, y: number, w: number, h: number) => {
         </span>
         
         <button 
-          @click="vueFlowInstance?.setViewport({ x: 0, y: 0, zoom: 1 })"
+          @click="resetZoom"
           class="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
           title="Reset Zoom to 100%"
         >
