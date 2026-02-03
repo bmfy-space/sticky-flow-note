@@ -1,25 +1,82 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { VueFlow, type Node } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
-import { useStorage, usePreferredDark } from '@vueuse/core'
+import { useStorage, usePreferredDark, useDebounceFn } from '@vueuse/core'
 import { RotateCcw } from 'lucide-vue-next'
 import StickyNoteNode from './components/StickyNoteNode.vue'
+import { db, type StickyNote } from './db'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/node-resizer/dist/style.css'
 
-// 持久化便签数据到本地存储
-const nodes = useStorage<Node[]>('sticky-notes-data', [
-  { 
-    id: '1', 
-    type: 'sticky', 
-    position: { x: 100, y: 100 }, 
-    data: { content: '<h1>Welcome!</h1><p>Double click anywhere or drag to create a note.</p>' },
-    style: { width: '300px', height: '250px' },
+// 视口类型定义
+interface Viewport {
+  x: number
+  y: number
+  zoom: number
+}
+
+// 便签数据（使用 IndexedDB 存储）
+const nodes = ref<Node[]>([])
+const isLoading = ref(true)
+
+// 默认便签数据
+const defaultNote: StickyNote = {
+  id: '1',
+  type: 'sticky',
+  position: { x: 100, y: 100 },
+  data: { content: '<h1>Welcome!</h1><p>Double click anywhere or drag to create a note.</p>' },
+  style: { width: '300px', height: '250px' }
+}
+
+// 从 IndexedDB 加载便签数据
+const loadNotes = async () => {
+  try {
+    const savedNotes = await db.notes.toArray()
+    if (savedNotes.length === 0) {
+      // 首次使用，添加默认便签
+      await db.notes.add(defaultNote)
+      nodes.value = [defaultNote as Node]
+    } else {
+      nodes.value = savedNotes as Node[]
+    }
+  } catch (error) {
+    console.error('加载便签数据失败:', error)
+    nodes.value = [defaultNote as Node]
+  } finally {
+    isLoading.value = false
   }
-], localStorage, { deep: true })
+}
+
+// 防抖保存便签数据到 IndexedDB
+const saveNotes = useDebounceFn(async (notesToSave: Node[]) => {
+  try {
+    // 将 Vue 响应式对象转换为纯 JavaScript 对象，避免 DataCloneError
+    const plainNotes = notesToSave.map(node => ({
+      id: node.id,
+      type: node.type,
+      position: { x: node.position.x, y: node.position.y },
+      data: { content: node.data?.content || '' },
+      style: node.style ? { width: (node.style as any).width, height: (node.style as any).height } : undefined
+    }))
+    await db.notes.clear()
+    await db.notes.bulkAdd(plainNotes as StickyNote[])
+  } catch (error) {
+    console.error('保存便签数据失败:', error)
+  }
+}, 500)
+
+// 监听便签数据变化并保存
+watch(nodes, (newNodes) => {
+  if (!isLoading.value) {
+    saveNotes(newNodes)
+  }
+}, { deep: true })
+
+// 持久化视口位置（缩放和平移）- 保持使用 localStorage
+const savedViewport = useStorage<Viewport>('sticky-notes-viewport', { x: 0, y: 0, zoom: 1 }, localStorage)
 
 const isDark = usePreferredDark()
 
@@ -27,8 +84,22 @@ const edges = ref([])
 
 const vueFlowInstance = ref<any>(null)
 
+// 防抖保存视口位置，避免频繁写入 localStorage
+const saveViewport = useDebounceFn((viewport: Viewport) => {
+  savedViewport.value = viewport
+}, 300)
+
+// 视口变化时保存位置
+const onViewportChange = (viewport: Viewport) => {
+  saveViewport(viewport)
+}
+
 const onInit = (instance: any) => {
   vueFlowInstance.value = instance
+  // 初始化时恢复上次的视口位置
+  if (savedViewport.value) {
+    instance.setViewport(savedViewport.value)
+  }
 }
 
 const fitView = (options?: any) => {
@@ -52,6 +123,8 @@ const onKeyUp = (e: KeyboardEvent) => {
 }
 
 onMounted(() => {
+  // 加载便签数据
+  loadNotes()
   window.addEventListener('keydown', onKeyDown)
   window.addEventListener('keyup', onKeyUp)
 })
@@ -171,12 +244,13 @@ const createNote = (x: number, y: number, w: number, h: number) => {
       :edges="edges"
       :min-zoom="0.1"
       :max-zoom="4"
-      :default-viewport="{ zoom: 1 }"
+      :default-viewport="savedViewport"
       :nodes-draggable="true"
       :nodes-connectable="false"
       :pan-on-drag="panOnDrag" 
       :pan-on-scroll="true"
       @init="onInit"
+      @viewport-change="onViewportChange"
       :zoom-on-double-click="false"
       class="h-full w-full"
     >
