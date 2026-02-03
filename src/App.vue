@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
-import { VueFlow, type Node } from '@vue-flow/core'
+import { VueFlow, type Node, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
-import { Controls } from '@vue-flow/controls'
 import { MiniMap } from '@vue-flow/minimap'
 import { useStorage, usePreferredDark, useDebounceFn } from '@vueuse/core'
-import { RotateCcw } from 'lucide-vue-next'
+import { RotateCcw, Maximize } from 'lucide-vue-next'
 import StickyNoteNode from './components/StickyNoteNode.vue'
 import { db, type StickyNote } from './db'
 import '@vue-flow/core/dist/style.css'
-import '@vue-flow/controls/dist/style.css'
 import '@vue-flow/minimap/dist/style.css'
 import '@vue-flow/node-resizer/dist/style.css'
 
@@ -82,6 +80,7 @@ const savedViewport = useStorage<Viewport>('sticky-notes-viewport', { x: 0, y: 0
 
 const isDark = usePreferredDark()
 
+const { viewport } = useVueFlow()
 const edges = ref([])
 
 const vueFlowInstance = ref<any>(null)
@@ -260,7 +259,7 @@ const createNote = (x: number, y: number, w: number, h: number) => {
     >
       <Background :pattern-color="isDark ? '#333' : '#ddd'" :gap="24" />
             
-      <Controls position="bottom-left" class="!bg-white dark:!bg-zinc-900 !border-zinc-200 dark:!border-zinc-800" />
+
 
       <MiniMap 
         position="bottom-right"
@@ -289,17 +288,34 @@ const createNote = (x: number, y: number, w: number, h: number) => {
          }"
     ></div>
     
-    <div class="fixed top-4 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur border border-zinc-200 dark:border-zinc-800 p-2 pl-4 pr-2 rounded-full shadow-lg flex items-center gap-3 z-50">
-      <span class="text-xs font-medium text-zinc-500 select-none">
-        Double-click or drag to create • Space to pan
+    <div class="fixed top-4 left-1/2 -translate-x-1/2 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200/50 dark:border-zinc-800/50 p-1.5 pl-4 pr-1.5 rounded-full shadow-lg flex items-center gap-3 z-50 transition-all hover:shadow-xl hover:border-zinc-300 dark:hover:border-zinc-700">
+      <span class="text-xs font-medium text-zinc-500 select-none hidden sm:inline-block">
+        Double-click to create • Space to pan
       </span>
-      <button 
-        @click="fitView({ padding: 0.2, duration: 800, maxZoom: 1 })"
-        class="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
-        title="Reset View"
-      >
-        <RotateCcw class="w-4 h-4" />
-      </button>
+      
+      <div class="h-4 w-[1px] bg-zinc-200 dark:bg-zinc-800 hidden sm:block"></div>
+
+      <div class="flex items-center gap-1">
+        <span class="text-xs font-variant-numeric tabular-nums w-12 text-center text-zinc-600 dark:text-zinc-400 select-none">
+          {{ Math.round((viewport.zoom || 1) * 100) }}%
+        </span>
+        
+        <button 
+          @click="vueFlowInstance?.setViewport({ x: 0, y: 0, zoom: 1 })"
+          class="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          title="Reset Zoom to 100%"
+        >
+          <RotateCcw class="w-3.5 h-3.5" />
+        </button>
+
+        <button 
+          @click="fitView({ padding: 0.2, duration: 800 })"
+          class="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          title="Fit to Screen"
+        >
+          <Maximize class="w-3.5 h-3.5" />
+        </button>
+      </div>
     </div>
 
   </div>
