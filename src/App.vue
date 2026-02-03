@@ -92,7 +92,6 @@ const saveViewport = useDebounceFn((viewport: Viewport) => {
 
 // 视口变化时保存位置
 const onViewportChange = (viewport: Viewport) => {
-  console.log('画布缩放:', viewport.zoom.toFixed(2))
   saveViewport(viewport)
 }
 

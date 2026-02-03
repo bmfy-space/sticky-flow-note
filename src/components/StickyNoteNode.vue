@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useVueFlow } from '@vue-flow/core'
 import { NodeResizer } from '@vue-flow/node-resizer'
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import { useDateFormat, useNow } from '@vueuse/core'
-import { Trash2 } from 'lucide-vue-next'
 import NoteEditor from './NoteEditor.vue'
+import { Minus, X, Maximize2, Minimize2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   id: string
@@ -15,7 +15,7 @@ const props = defineProps<{
   selected?: boolean
 }>()
 
-const { removeNodes } = useVueFlow() 
+const { removeNodes, findNode } = useVueFlow() 
 
 // Internal state for the editor content to sync with node data
 const content = ref(props.data.content)
@@ -27,9 +27,76 @@ watch(content, (newVal) => {
   props.data.content = newVal
 })
 
-const deleteNote = () => {
+// --- Traffic Light Logic ---
+const isMinimized = ref(false)
+const isMaximized = ref(false)
+const savedStyle = ref<{width: string, height: string} | null>(null)
+
+const node = computed(() => findNode(props.id))
+
+const handleRed = () => {
   removeNodes(props.id)
 }
+
+const handleYellow = () => {
+  if (!node.value) return
+  const n = node.value
+
+  if (isMinimized.value) {
+    // Restore from minimize
+    if (savedStyle.value) {
+       n.style = { ...n.style, height: savedStyle.value.height }
+    } else {
+       // Fallback
+       n.style = { ...n.style, height: '300px' }
+    }
+    isMinimized.value = false
+  } else {
+    // Minimize
+    // Look for style in node.style, fallback to computed or default
+    const currentH = n.style?.height ? String(n.style.height) : '300px'
+    const currentW = n.style?.width ? String(n.style.width) : '300px'
+    
+    savedStyle.value = { width: currentW, height: currentH }
+    
+    // Set height to header height (approx 36px/40px)
+    n.style = { ...n.style, height: '34px' } // 32px + borders
+    isMinimized.value = true
+  }
+}
+
+const handleGreen = () => {
+  if (!node.value) return
+  const n = node.value
+
+  if (isMinimized.value) {
+      // If minimized, restore first
+      handleYellow()
+      return
+  }
+
+  if (isMaximized.value) {
+      // Restore size
+       if (savedStyle.value) {
+          n.style = { ...n.style, width: savedStyle.value.width, height: savedStyle.value.height }
+       }
+       isMaximized.value = false
+  } else {
+      // Maximize to 90% of viewport
+      const currentH = n.style?.height ? String(n.style.height) : '300px'
+      const currentW = n.style?.width ? String(n.style.width) : '300px'
+      
+      savedStyle.value = { width: currentW, height: currentH }
+      
+      // Calculate 90% of the window dimensions
+      const targetW = window.innerWidth * 0.9
+      const targetH = window.innerHeight * 0.9
+      
+      n.style = { ...n.style, width: `${targetW}px`, height: `${targetH}px` }
+      isMaximized.value = true
+  }
+}
+
 </script>
 
 <template>
@@ -40,41 +107,45 @@ const deleteNote = () => {
     ]"
   >
     <NodeResizer 
-      :min-width="60" 
-      :min-height="60" 
-      :is-visible="selected" 
+      :min-width="200" 
+      :min-height="isMinimized ? 34 : 100" 
+      :is-visible="selected && !isMinimized" 
       line-class-name="!bg-transparent" 
       handle-class-name="!bg-transparent"
     />
 
     <!-- Header / Drag Handle -->
-    <!-- 'custom-drag-handle' class is used by VueFlow to restrict dragging to this area if configured, 
-         but by default VueFlow drags the whole node. We'll let whole node drag for now unless text is selected. -->
-    <div class="h-8 shrink-0 bg-yellow-200/50 dark:bg-zinc-800/80 backdrop-blur-sm border-b border-yellow-200/50 dark:border-zinc-800 flex items-center justify-between px-2 cursor-move select-none header-handle">
-      <div class="flex gap-1.5 opacity-60 hover:opacity-100 transition-opacity">
-         <!-- Fake traffic lights -->
-         <div class="w-2.5 h-2.5 rounded-full bg-red-400/80"></div>
-         <div class="w-2.5 h-2.5 rounded-full bg-yellow-400/80"></div>
-         <div class="w-2.5 h-2.5 rounded-full bg-green-400/80"></div>
+    <div class="h-8 shrink-0 bg-yellow-200/50 dark:bg-zinc-800/80 backdrop-blur-sm border-b border-yellow-200/50 dark:border-zinc-800 flex items-center justify-between px-2 cursor-move select-none header-handle group">
+      
+      <!-- Traffic Lights -->
+      <div class="flex gap-1.5 opacity-100 transition-opacity">
+         <!-- Red: Delete -->
+         <div @click.stop="handleRed" class="w-3 h-3 rounded-full bg-[#ff5f56] border-[0.5px] border-[#e0443e] flex items-center justify-center cursor-pointer active:brightness-90">
+             <X class="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+         </div>
+         <!-- Yellow: Minimize -->
+         <div @click.stop="handleYellow" class="w-3 h-3 rounded-full bg-[#ffbd2e] border-[0.5px] border-[#dea123] flex items-center justify-center cursor-pointer active:brightness-90">
+             <Minus class="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+         </div>
+         <!-- Green: Maximize -->
+         <div @click.stop="handleGreen" class="w-3 h-3 rounded-full bg-[#27c93f] border-[0.5px] border-[#1aab29] flex items-center justify-center cursor-pointer active:brightness-90">
+             <component :is="isMaximized ? Minimize2 : Maximize2" class="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" />
+         </div>
       </div>
       
-      <div class="text-[10px] text-yellow-800 dark:text-zinc-500 font-mono">
+      <div class="text-[10px] text-yellow-800 dark:text-zinc-500 font-mono transition-opacity" :class="{ 'opacity-0': false }">
         {{ formattedDate }}
       </div>
-
-      <button @click.stop="deleteNote" class="text-black/20 hover:text-red-500 dark:text-white/20 dark:hover:text-red-400 transition-colors p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5">
-        <Trash2 class="w-3.5 h-3.5" />
-      </button>
+    
+      <!-- Spacer to balance header -->
+      <div class="w-8"></div> 
     </div>
 
     <!-- Content -->
-    <!-- 'nodrag' class allows interaction with text editor without moving the node -->
-    <div class="flex-1 overflow-hidden relative nowheel nodrag cursor-text">
+    <div class="flex-1 overflow-hidden relative nowheel nodrag cursor-text" v-show="!isMinimized">
       <NoteEditor v-model="content" class="h-full w-full outline-none" />
     </div>
 
-    <!-- We can add handles if we want connections later -->
-    <!-- <Handle type="source" :position="Position.Bottom" /> -->
   </div>
 </template>
 
