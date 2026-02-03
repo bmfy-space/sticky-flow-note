@@ -290,20 +290,26 @@ const createNote = (x: number, y: number, w: number, h: number) => {
       :zoom-on-double-click="false"
       class="h-full w-full"
     >
-      <Background :pattern-color="isDark ? '#333' : '#ddd'" :gap="24" />
+      <Background 
+        :pattern-color="isDark ? '#27272a' : '#e4e4e7'" 
+        :gap="20" 
+        :size="1.5"
+        variant="dots"
+      />
             
-
 
       <MiniMap 
         position="bottom-right"
         :pannable="true"
         :zoomable="true"
-        :node-stroke-color="isDark ? 'transparent' : 'transparent'"
-        :node-color="isDark ? '#52525b' : '#e4e4e7'"
-        :mask-color="isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(240, 240, 240, 0.5)'"
+        :node-stroke-color="'transparent'"
+        :node-color="isDark ? '#e4e4e7' : '#fbbf24'"
+        :mask-color="isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(255, 255, 255, 0.8)'"
+        :mask-stroke-color="isDark ? '#52525b' : '#d4d4d8'"
+        :mask-stroke-width="2"
         :node-border-radius="4"
         @click="onMiniMapClick"
-        class="!bg-white/50 dark:!bg-zinc-900/50 !backdrop-blur-md !border !border-zinc-200/50 dark:!border-zinc-800/50 !bottom-6 !right-6 !shadow-lg !rounded-2xl overflow-hidden !w-[200px] !h-[140px]" 
+        class="!bg-zinc-50/50 dark:!bg-zinc-900/50 !backdrop-blur-sm !border !border-zinc-200/50 dark:!border-zinc-800/50 !bottom-6 !right-6 !shadow-sm !rounded-xl overflow-hidden !w-[200px] !h-[140px] transition-all hover:!shadow-md hover:!bg-zinc-50/80 dark:hover:!bg-zinc-900/80" 
       />
 
       <template #node-sticky="props">
