@@ -258,7 +258,7 @@ const createNote = (x: number, y: number, w: number, h: number) => {
     id,
     type: 'sticky',
     position: { x, y },
-    data: { content: '<p></p>', updatedAt: Date.now() },
+    data: { content: '<p></p>', updatedAt: Date.now(), autoFocus: true },
     style: { width: `${w}px`, height: `${h}px` }
   }
   vueFlowInstance.value.addNodes([newNode])

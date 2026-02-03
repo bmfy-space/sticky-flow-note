@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
-// StarterKit includes essentials.
 
 const props = defineProps<{
   modelValue: string
+  autoFocus?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -13,6 +13,7 @@ const emit = defineEmits<{
 
 const editor = useEditor({
   content: props.modelValue,
+  autofocus: props.autoFocus ? 'end' : false,
   extensions: [
     StarterKit.configure({
       heading: {
@@ -20,6 +21,14 @@ const editor = useEditor({
       },
     }),
   ],
+  onCreate({ editor }) {
+    if (props.autoFocus) {
+      // 给一点延迟，确保 Vue Flow 已经完全将节点渲染到 DOM 树中
+      setTimeout(() => {
+        editor.commands.focus('end')
+      }, 100)
+    }
+  },
   editorProps: {
     attributes: {
       class: 'prose-sm focus:outline-none h-full text-zinc-800 dark:text-zinc-200 leading-relaxed',
@@ -30,7 +39,12 @@ const editor = useEditor({
   },
 })
 
-// Watch for external changes if needed, but for local note usually not.
+// 暴露 focus 方法供父组件调用
+const focus = () => {
+  editor.value?.commands.focus()
+}
+
+defineExpose({ focus })
 </script>
 
 <template>

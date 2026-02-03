@@ -11,6 +11,7 @@ const props = defineProps<{
   data: { 
     content: string 
     updatedAt?: number
+    autoFocus?: boolean
   }
   selected?: boolean
 }>()
@@ -82,7 +83,7 @@ const handleRed = () => {
 
     <!-- Content -->
     <div class="flex-1 overflow-hidden relative nowheel nodrag cursor-text">
-      <NoteEditor v-model="content" class="h-full w-full outline-none" />
+      <NoteEditor v-model="content" :auto-focus="data.autoFocus" class="h-full w-full outline-none" />
     </div>
 
   </div>
