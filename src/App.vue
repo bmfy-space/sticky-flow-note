@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { VueFlow, useVueFlow, type Node, type XYPosition } from '@vue-flow/core'
+import { VueFlow, type Node, type XYPosition } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
 import { useStorage, usePreferredDark } from '@vueuse/core'
@@ -28,27 +28,35 @@ const isDark = usePreferredDark()
 const edges = ref([])
 
 // --- Interactions ---
-const { addNodes, screenToFlowCoordinate, fitView } = useVueFlow()
+// --- Interactions ---
+// We cannot use useVueFlow() here because App.vue is the parent of <VueFlow>.
+// We must access the instance via the @init event.
+const vueFlowInstance = ref<any>(null)
+
+const onInit = (instance: any) => {
+  vueFlowInstance.value = instance
+}
+
+const fitView = (options?: any) => {
+  vueFlowInstance.value?.fitView(options)
+}
 
 const isDrawing = ref(false)
 const isSpacePressed = ref(false)
 
-// Dynamic Pan On Drag: If true (boolean), it allows left click pan. 
-// We want: Right/Middle (buttons 1,2) always pan. Left (button 0) only pans if Space is held.
-// Vue Flow `panOnDrag` can be a boolean or an array of button codes.
-// Unfortunately it's not reactive to a function easily for "Left Button ONLY when space".
-// So we switch the prop value based on Space key.
-// [1, 2] = Middle, Right. true = All.
-// logic: if space pressed, value is true (all buttons). if not, value is [1, 2].
+// Dynamic Pan On Drag...
 const panOnDrag = computed(() => isSpacePressed.value ? true : [1, 2])
 
+// ... (Keys listeners remain same) ...
 // Key Listeners
 const onKeyDown = (e: KeyboardEvent) => {
+  // ... existing code ...
   if (e.code === 'Space' && !e.repeat) {
     isSpacePressed.value = true
   }
 }
 const onKeyUp = (e: KeyboardEvent) => {
+  // ... existing code ...
   if (e.code === 'Space') {
     isSpacePressed.value = false
   }
@@ -64,10 +72,16 @@ onUnmounted(() => {
   window.removeEventListener('keyup', onKeyUp)
 })
 
-// Double Click to create default note
-const onPaneDoubleClick = (event: MouseEvent) => {
-  const position = screenToFlowCoordinate({ x: event.clientX, y: event.clientY })
-  createNote(position.x - 150, position.y - 100, 300, 200) // Center approx
+// 双击创建默认大小的便签
+const onWrapperDoubleClick = (e: MouseEvent) => {
+  const target = e.target as HTMLElement
+  // 仅当双击画布背景时才创建
+  if (!target.classList.contains('vue-flow__pane')) return
+  if (!vueFlowInstance.value) return
+  
+  const position = vueFlowInstance.value.screenToFlowCoordinate({ x: e.clientX, y: e.clientY })
+  // 创建默认大小 400x300 的便签，居中于点击位置
+  createNote(position.x - 200, position.y - 150, 400, 300)
 }
 
 // --- Draw to Create Logic ---
@@ -93,8 +107,11 @@ const onWrapperMouseDown = (e: MouseEvent) => {
     
     // Record starting positions
     dragStartScreen.value = { x: e.clientX, y: e.clientY }
-    const flowPos = screenToFlowCoordinate({ x: e.clientX, y: e.clientY })
-    dragStartFlow.value = flowPos
+    
+    if (vueFlowInstance.value) {
+      const flowPos = vueFlowInstance.value.screenToFlowCoordinate({ x: e.clientX, y: e.clientY })
+      dragStartFlow.value = flowPos
+    }
     
     selectionRect.value = { x: e.clientX, y: e.clientY, w: 0, h: 0 }
   }
@@ -119,7 +136,21 @@ const onWrapperMouseMove = (e: MouseEvent) => {
 }
 
 const onWrapperMouseUp = (e: MouseEvent) => {
-  if (!isDrawing.value || !dragStartFlow.value || !selectionRect.value) {
+  // 调试日志
+  console.log('mouseup triggered', {
+    vueFlowInstance: !!vueFlowInstance.value,
+    isDrawing: isDrawing.value,
+    dragStartFlow: dragStartFlow.value,
+    dragStartScreen: dragStartScreen.value,
+    selectionRect: selectionRect.value
+  })
+
+  if (!vueFlowInstance.value) {
+    isDrawing.value = false
+    return
+  }
+
+  if (!isDrawing.value || !selectionRect.value) {
     isDrawing.value = false
     return
   }
@@ -128,27 +159,32 @@ const onWrapperMouseUp = (e: MouseEvent) => {
   const finalW = selectionRect.value.w
   const finalH = selectionRect.value.h
 
+  console.log('绘制尺寸:', { finalW, finalH })
+
   // Reset
   isDrawing.value = false
   selectionRect.value = null
   
-  // Only create if it's a drag (threshold 30px), otherwise clear/ignore
-  if (finalW > 30 && finalH > 30) {
-    // Correct approach: Convert both Start and End points to Flow Coordinates
-    // This handles zoom and pan automatically and precisely.
+  // 仅当屏幕上绘制宽度 >= 300 时才创建便签
+  if (finalW >= 300) {
+    console.log('宽度满足要求，创建便签')
+    // 将屏幕坐标转换为 Flow 坐标
     const startScreen = dragStartScreen.value!
     const endScreen = { x: e.clientX, y: e.clientY }
 
-    const startFlow = screenToFlowCoordinate(startScreen)
-    const endFlow = screenToFlowCoordinate(endScreen)
+    const startFlow = vueFlowInstance.value.screenToFlowCoordinate(startScreen)
+    const endFlow = vueFlowInstance.value.screenToFlowCoordinate(endScreen)
 
-    // Calculate bounds in Flow Space
+    // 计算 Flow 坐标系中的边界
     const x = Math.min(startFlow.x, endFlow.x)
     const y = Math.min(startFlow.y, endFlow.y)
     const w = Math.abs(startFlow.x - endFlow.x)
     const h = Math.abs(startFlow.y - endFlow.y)
     
+    console.log('创建便签位置和大小:', { x, y, w, h })
     createNote(x, y, w, h)
+  } else {
+    console.log('尺寸不满足要求，不创建便签')
   }
   
   dragStartFlow.value = null
@@ -156,6 +192,7 @@ const onWrapperMouseUp = (e: MouseEvent) => {
 }
 
 const createNote = (x: number, y: number, w: number, h: number) => {
+  if (!vueFlowInstance.value) return
   const id = Date.now().toString()
   const newNode: Node = {
     id,
@@ -164,7 +201,7 @@ const createNote = (x: number, y: number, w: number, h: number) => {
     data: { content: '<p></p>' },
     style: { width: `${w}px`, height: `${h}px` }
   }
-  addNodes([newNode])
+  vueFlowInstance.value.addNodes([newNode])
 }
 
 </script>
@@ -177,6 +214,7 @@ const createNote = (x: number, y: number, w: number, h: number) => {
     @mousedown="onWrapperMouseDown"
     @mousemove="onWrapperMouseMove"
     @mouseup="onWrapperMouseUp"
+    @dblclick="onWrapperDoubleClick"
   >
     <VueFlow
       v-model="nodes"
@@ -188,12 +226,13 @@ const createNote = (x: number, y: number, w: number, h: number) => {
       :nodes-connectable="false"
       :pan-on-drag="panOnDrag" 
       :pan-on-scroll="true"
-      @pane-dbl-click="onPaneDoubleClick"
+      @init="onInit"
+      :zoom-on-double-click="false"
       class="h-full w-full"
     >
       <!-- Background pattern -->
-      <Background :pattern-color="isDark ? '#333' : '#ddd'" gap="24" />
-      
+      <Background :pattern-color="isDark ? '#333' : '#ddd'" :gap="24" />
+            
       <!-- Controls (Bottom Left) -->
       <Controls position="bottom-left" class="!bg-white dark:!bg-zinc-900 !border-zinc-200 dark:!border-zinc-800" />
 
