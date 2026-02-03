@@ -91,6 +91,7 @@ const saveViewport = useDebounceFn((viewport: Viewport) => {
 
 // 视口变化时保存位置
 const onViewportChange = (viewport: Viewport) => {
+  console.log('画布缩放:', viewport.zoom.toFixed(2))
   saveViewport(viewport)
 }
 
@@ -279,7 +280,7 @@ const createNote = (x: number, y: number, w: number, h: number) => {
         Double-click or drag to create • Space to pan
       </span>
       <button 
-        @click="fitView({ padding: 0.2, duration: 800 })"
+        @click="fitView({ padding: 0.2, duration: 800, maxZoom: 1 })"
         class="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
         title="Reset View"
       >
