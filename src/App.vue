@@ -126,6 +126,21 @@ const resetZoom = () => {
   vueFlowInstance.value.setViewport({ x: newX, y: newY, zoom: 1 })
 }
 
+// 点击小地图跳转到对应位置
+const onMiniMapClick = ({ position }: { event: MouseEvent, position: { x: number, y: number } }) => {
+  if (!vueFlowInstance.value) return
+  
+  const currentZoom = viewport.value.zoom
+  const screenCenterX = window.innerWidth / 2
+  const screenCenterY = window.innerHeight / 2
+  
+  // 计算新的视口位置，使点击的画布坐标移到屏幕中心
+  const newX = screenCenterX - position.x * currentZoom
+  const newY = screenCenterY - position.y * currentZoom
+  
+  vueFlowInstance.value.setViewport({ x: newX, y: newY, zoom: currentZoom })
+}
+
 const isDrawing = ref(false)
 const isSpacePressed = ref(false)
 
@@ -287,6 +302,7 @@ const createNote = (x: number, y: number, w: number, h: number) => {
         :node-color="isDark ? '#52525b' : '#e4e4e7'"
         :mask-color="isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(240, 240, 240, 0.5)'"
         :node-border-radius="4"
+        @click="onMiniMapClick"
         class="!bg-white/50 dark:!bg-zinc-900/50 !backdrop-blur-md !border !border-zinc-200/50 dark:!border-zinc-800/50 !bottom-6 !right-6 !shadow-lg !rounded-2xl overflow-hidden !w-[200px] !h-[140px]" 
       />
 
