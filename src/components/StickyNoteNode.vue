@@ -123,12 +123,12 @@ const handleGreen = () => {
          <div @click.stop="handleRed" class="w-3 h-3 rounded-full bg-[#ff5f56] border-[0.5px] border-[#e0443e] flex items-center justify-center cursor-pointer active:brightness-90">
              <X class="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" />
          </div>
-         <!-- Yellow: Minimize -->
-         <div @click.stop="handleYellow" class="w-3 h-3 rounded-full bg-[#ffbd2e] border-[0.5px] border-[#dea123] flex items-center justify-center cursor-pointer active:brightness-90">
+         <!-- Yellow: Minimize (已禁用) -->
+         <div class="w-3 h-3 rounded-full bg-[#ffbd2e] border-[0.5px] border-[#dea123] flex items-center justify-center">
              <Minus class="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" />
          </div>
-         <!-- Green: Maximize -->
-         <div @click.stop="handleGreen" class="w-3 h-3 rounded-full bg-[#27c93f] border-[0.5px] border-[#1aab29] flex items-center justify-center cursor-pointer active:brightness-90">
+         <!-- Green: Maximize (已禁用) -->
+         <div class="w-3 h-3 rounded-full bg-[#27c93f] border-[0.5px] border-[#1aab29] flex items-center justify-center">
              <component :is="isMaximized ? Minimize2 : Maximize2" class="w-2 h-2 text-black/60 opacity-0 group-hover:opacity-100 transition-opacity" />
          </div>
       </div>
