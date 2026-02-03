@@ -4,7 +4,7 @@ import { VueFlow, type Node, useVueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
 import { useStorage, usePreferredDark, useDebounceFn } from '@vueuse/core'
-import { RotateCcw, Maximize } from 'lucide-vue-next'
+import { RotateCcw, Maximize, LayoutGrid } from 'lucide-vue-next'
 import StickyNoteNode from './components/StickyNoteNode.vue'
 import { db, type StickyNote } from './db'
 import '@vue-flow/core/dist/style.css'
@@ -168,6 +168,47 @@ onUnmounted(() => {
   window.removeEventListener('keydown', onKeyDown)
   window.removeEventListener('keyup', onKeyUp)
 })
+
+const organizeNotes = () => {
+  if (!nodes.value.length) return
+  
+  // 按只读顺序或ID排序，这里按 ID（创建时间）排序，保证顺序稳定
+  // Sort by ID (creation time) to ensure stable order
+  const sortedNodes = [...nodes.value].sort((a, b) => Number(a.id) - Number(b.id))
+  
+  const gap = 24
+  const columnCount = 3
+  const startX = 0
+  const startY = 0
+  
+  let currentX = startX
+  let currentY = startY
+  let rowMaxHeight = 0
+  
+  sortedNodes.forEach((node, index) => {
+    const style = node.style as any || {}
+    const w = parseFloat(style.width as string) || 300
+    const h = parseFloat(style.height as string) || 250
+    
+    // Check if new row needed
+    if (index > 0 && index % columnCount === 0) {
+      currentX = startX
+      currentY += rowMaxHeight + gap
+      rowMaxHeight = 0
+    }
+    
+    node.position = { x: currentX, y: currentY }
+    
+    rowMaxHeight = Math.max(rowMaxHeight, h)
+    currentX += w + gap
+  })
+  
+  nodes.value = [...sortedNodes]
+  
+  setTimeout(() => {
+    fitView({ padding: 0.2, duration: 800 })
+  }, 100)
+}
 
 const onWrapperDoubleClick = (e: MouseEvent) => {
   const target = e.target as HTMLElement
@@ -346,6 +387,14 @@ const createNote = (x: number, y: number, w: number, h: number) => {
           title="Reset Zoom to 100%"
         >
           <RotateCcw class="w-3.5 h-3.5" />
+        </button>
+
+        <button 
+          @click="organizeNotes"
+          class="p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors"
+          title="Organize Notes"
+        >
+          <LayoutGrid class="w-3.5 h-3.5" />
         </button>
 
         <button 
