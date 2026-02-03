@@ -27,7 +27,7 @@ const defaultNote: StickyNote = {
   id: '1',
   type: 'sticky',
   position: { x: 100, y: 100 },
-  data: { content: '<h1>Welcome!</h1><p>Double click anywhere or drag to create a note.</p>' },
+  data: { content: '<h1>Welcome!</h1><p>Double click anywhere or drag to create a note.</p>', updatedAt: Date.now() },
   style: { width: '300px', height: '250px' }
 }
 
@@ -58,7 +58,7 @@ const saveNotes = useDebounceFn(async (notesToSave: Node[]) => {
       id: node.id,
       type: node.type,
       position: { x: node.position.x, y: node.position.y },
-      data: { content: node.data?.content || '' },
+      data: { content: node.data?.content || '', updatedAt: node.data?.updatedAt || Date.now() },
       style: node.style ? { width: (node.style as any).width, height: (node.style as any).height } : undefined
     }))
     await db.notes.clear()
@@ -258,7 +258,7 @@ const createNote = (x: number, y: number, w: number, h: number) => {
     id,
     type: 'sticky',
     position: { x, y },
-    data: { content: '<p></p>' },
+    data: { content: '<p></p>', updatedAt: Date.now() },
     style: { width: `${w}px`, height: `${h}px` }
   }
   vueFlowInstance.value.addNodes([newNode])

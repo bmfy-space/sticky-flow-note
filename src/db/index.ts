@@ -5,7 +5,7 @@ export interface StickyNote {
   id: string
   type: string
   position: { x: number; y: number }
-  data: { content: string }
+  data: { content: string; updatedAt: number }
   style: { width: string; height: string }
 }
 
