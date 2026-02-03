@@ -140,8 +140,9 @@ const onWrapperDoubleClick = (e: MouseEvent) => {
   if (!target.classList.contains('vue-flow__pane')) return
   if (!vueFlowInstance.value) return
   
+  // 将屏幕坐标转换为画布坐标，鼠标位置即为便签左上角
   const position = vueFlowInstance.value.screenToFlowCoordinate({ x: e.clientX, y: e.clientY })
-  createNote(position.x - 200, position.y - 150, 400, 300)
+  createNote(position.x, position.y, 400, 300)
 }
 
 const selectionRect = ref<{ x: number, y: number, w: number, h: number } | null>(null)
