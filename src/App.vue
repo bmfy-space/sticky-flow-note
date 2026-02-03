@@ -3,12 +3,14 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { VueFlow, type Node } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { Controls } from '@vue-flow/controls'
+import { MiniMap } from '@vue-flow/minimap'
 import { useStorage, usePreferredDark, useDebounceFn } from '@vueuse/core'
 import { RotateCcw } from 'lucide-vue-next'
 import StickyNoteNode from './components/StickyNoteNode.vue'
 import { db, type StickyNote } from './db'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/controls/dist/style.css'
+import '@vue-flow/minimap/dist/style.css'
 import '@vue-flow/node-resizer/dist/style.css'
 
 // 视口类型定义
@@ -259,6 +261,17 @@ const createNote = (x: number, y: number, w: number, h: number) => {
       <Background :pattern-color="isDark ? '#333' : '#ddd'" :gap="24" />
             
       <Controls position="bottom-left" class="!bg-white dark:!bg-zinc-900 !border-zinc-200 dark:!border-zinc-800" />
+
+      <MiniMap 
+        position="bottom-right"
+        :pannable="true"
+        :zoomable="true"
+        :node-stroke-color="isDark ? 'transparent' : 'transparent'"
+        :node-color="isDark ? '#52525b' : '#e4e4e7'"
+        :mask-color="isDark ? 'rgba(0, 0, 0, 0.3)' : 'rgba(240, 240, 240, 0.5)'"
+        :node-border-radius="4"
+        class="!bg-white/50 dark:!bg-zinc-900/50 !backdrop-blur-md !border !border-zinc-200/50 dark:!border-zinc-800/50 !bottom-6 !right-6 !shadow-lg !rounded-2xl overflow-hidden !w-[200px] !h-[140px]" 
+      />
 
       <template #node-sticky="props">
         <StickyNoteNode v-bind="props" />
