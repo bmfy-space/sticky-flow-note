@@ -96,6 +96,7 @@ const handleRed = () => {
   overflow-y: auto;
   padding: 12px;
   outline: none;
+  font-family: var(--note-font-family, inherit);
 }
 /* Custom Scrollbar for the note content */
 .ProseMirror::-webkit-scrollbar {
